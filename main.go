@@ -1,12 +1,19 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
-	"net"
 	"strings"
 )
+
+type Info struct {
+	IP       interface{} `json:"ipaddress"`
+	Language interface{} `json:"language"`
+	Software interface{} `json:"software"`
+}
 
 func main() {
 	port := os.Getenv("PORT")
@@ -19,6 +26,8 @@ func main() {
 }
 
 func Router(w http.ResponseWriter, r *http.Request) {
+	var info = Info{}
+
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		fmt.Println("SplitHostPort returned an error")
@@ -38,10 +47,14 @@ func Router(w http.ResponseWriter, r *http.Request) {
 	}
 	userAgent := r.Header.Get("User-Agent")
 	fields := strings.FieldsFunc(userAgent, f)
+	software := fields[1]
 
-	sys := fields[1]
+	info = Info{IP: userIp, Language: lang, Software: software}
 
-	fmt.Println(userIp)
-	fmt.Println(lang)
-	fmt.Println(sys)
+	js, err := json.Marshal(info)
+	if err != nil {
+		fmt.Println("Json Marshal returned nil")
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
 }
