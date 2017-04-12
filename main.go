@@ -28,12 +28,7 @@ func main() {
 func Router(w http.ResponseWriter, r *http.Request) {
 	var info = Info{}
 
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		fmt.Println("SplitHostPort returned an error")
-		return
-	}
-	userIp := net.ParseIP(ip)
+	userIp := net.ParseIP(GetIP(r))
 	if userIp == nil {
 		fmt.Println("ParseIP returned nil")
 	}
@@ -57,4 +52,15 @@ func Router(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
+}
+
+func GetIP(r *http.Request) string {
+	if ipProxy := r.Header.Get("X-FORWARDED-FOR"); len(ipProxy) > 0 {
+		return ipProxy
+	}
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		fmt.Println("SplitHostPort returned an error")
+	}
+	return ip
 }
