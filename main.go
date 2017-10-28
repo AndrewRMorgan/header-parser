@@ -15,20 +15,32 @@ type Info struct {
 	Software interface{} `json:"software"`
 }
 
+var err error
+
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	http.HandleFunc("/", Router)
+	http.HandleFunc("/", parseHeader)
 	http.ListenAndServe(":"+port, nil)
 }
 
-func Router(w http.ResponseWriter, r *http.Request) {
+func parseHeader(w http.ResponseWriter, r *http.Request) {
 	var info = Info{}
 
-	userIp := net.ParseIP(GetIP(r))
+	var ip string
+	if ipProxy := r.Header.Get("X-FORWARDED-FOR"); len(ipProxy) > 0 {
+		ip = ipProxy
+	} else {
+		ip, _, err = net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			fmt.Println("SplitHostPort returned an error")
+		}
+	}
+
+	userIp := net.ParseIP(ip)
 	if userIp == nil {
 		fmt.Println("ParseIP returned nil")
 	}
@@ -52,15 +64,4 @@ func Router(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
-}
-
-func GetIP(r *http.Request) string {
-	if ipProxy := r.Header.Get("X-FORWARDED-FOR"); len(ipProxy) > 0 {
-		return ipProxy
-	}
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		fmt.Println("SplitHostPort returned an error")
-	}
-	return ip
 }
